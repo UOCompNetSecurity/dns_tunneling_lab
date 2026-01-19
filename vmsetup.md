@@ -43,7 +43,6 @@ setup-apkrepos -c
 6. Run the following commands to make the changes persist among vm startup   
 
 ``` sh 
-apk add syslinux blkid
 
 setup-disk
 # this will prompt for disk to use. press "enter" 
