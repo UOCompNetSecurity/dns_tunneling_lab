@@ -182,32 +182,31 @@ class TerminalIFace:
         self.input_area.refresh()
 
     def _split_lines(self, message: str, width: int): 
-        with open("DEBUG.txt", "w") as f: 
-            cur_ch_line = 0
-            seperated = []
+        cur_ch_line = 0
+        seperated = []
 
-            seperated_start = 0
-            for i, ch in enumerate(message): 
-                if cur_ch_line >= width - 2: 
-                    seperated.append(message[seperated_start:i - 5])
-                    seperated_start = i - 1
-                    cur_ch_line = 0 
+        seperated_start = 0
+        for i, ch in enumerate(message): 
+            if cur_ch_line >= width - 2: 
+                seperated.append(message[seperated_start:i - 5])
+                seperated_start = i - 1
+                cur_ch_line = 0 
 
-                if ch == '\n': 
-                    cur_ch_line = 0
-                else: 
-                    cur_ch_line += 1
+            if ch == '\n': 
+                cur_ch_line = 0
+            else: 
+                cur_ch_line += 1
 
-            seperated.append(message[seperated_start:len(message)])
+        seperated.append(message[seperated_start:len(message)])
 
-            for i in range(len(seperated)): 
-                seperated[i] = seperated[i] + '\n'
+        for i in range(len(seperated)): 
+            seperated[i] = seperated[i] + '\n'
 
-            glued = ""
-            for message in seperated: 
-                glued += message
+        glued = ""
+        for message in seperated: 
+            glued += message
 
-            output = glued.splitlines()
+        output = glued.splitlines()
 
         return output
 
