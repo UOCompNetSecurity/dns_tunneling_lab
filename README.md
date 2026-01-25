@@ -1,5 +1,4 @@
-# DNS Tunneling Lab
-- Virtual machine lab to demonstrate DNS tunneling and prevention methods
+# DNS Tunneling Shell
+- Remote shell setup through DNS queries and responses from a compromised computer to the attackers DNS server. 
 
-## Project for Computer and Network Security Winter 2026
-- Members: Josiah Kitchin, Kai Hogan, Kobe Pane
+
